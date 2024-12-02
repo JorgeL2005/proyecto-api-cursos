@@ -1,0 +1,114 @@
+org: jorgeleonv
+service: proyecto-api-cursos
+
+provider:
+  name: aws
+  runtime: python3.12
+  memorySize: 1024
+  timeout: 29 # Reducido para cumplir con API Gateway
+  iam:
+    role: arn:aws:iam::831178165254:role/LabRole
+  environment:
+    TABLE_NAME: ${sls:stage}-t_cursos # Nombre dinámico de la tabla DynamoDB
+
+functions:
+  CrearCurso:
+    handler: CrearCurso.lambda_handler
+    name: ${sls:stage}-CrearCurso
+    events:
+      - http:
+          path: /cursos/crear
+          method: post
+          cors: true
+          integration: lambda
+          request:
+            template:
+              application/json: |
+                {
+                  "method": "$context.httpMethod",
+                  "path": "$context.path",
+                  "headers": {
+                    "Authorization": "$input.params('Authorization')"
+                  },
+                  "body": $input.body
+                }
+
+  ConsultarCurso:
+    handler: ConsultarCurso.lambda_handler
+    name: ${sls:stage}-ConsultarCurso
+    events:
+      - http:
+          path: /cursos/consultar
+          method: post
+          cors: true
+          integration: lambda
+          request:
+            template:
+              application/json: |
+                {
+                  "method": "$context.httpMethod",
+                  "path": "$context.path",
+                  "headers": {
+                    "Authorization": "$input.params('Authorization')"
+                  },
+                  "body": $input.body
+                }
+
+  EliminarCurso:
+    handler: EliminarCurso.lambda_handler
+    name: ${sls:stage}-EliminarCurso
+    events:
+      - http:
+          path: /cursos/eliminar
+          method: delete
+          cors: true
+          integration: lambda
+          request:
+            template:
+              application/json: |
+                {
+                  "method": "$context.httpMethod",
+                  "path": "$context.path",
+                  "headers": {
+                    "Authorization": "$input.params('Authorization')"
+                  },
+                  "body": $input.body
+                }
+
+  AllCursos:
+    handler: AllCursos.lambda_handler
+    name: ${sls:stage}-AllCursos
+    events:
+      - http:
+          path: /cursos/todos
+          method: get
+          cors: true
+          integration: lambda
+          request:
+            template:
+              application/json: |
+                {
+                  "method": "$context.httpMethod",
+                  "path": "$context.path",
+                  "headers": {
+                    "Authorization": "$input.params('Authorization')"
+                  }
+                }
+
+resources:
+  Resources:
+    TablaCursos:
+      Type: AWS::DynamoDB::Table
+      Properties:
+        TableName: ${self:provider.environment.TABLE_NAME}
+        AttributeDefinitions:
+          - AttributeName: tenant_id
+            AttributeType: S
+          - AttributeName: curso_id
+            AttributeType: S
+        KeySchema:
+          - AttributeName: tenant_id
+            KeyType: HASH
+          - AttributeName: curso_id
+            KeyType: RANGE
+        BillingMode: PAY_PER_REQUEST # Facturación basada en uso
